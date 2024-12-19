@@ -76,7 +76,7 @@ def index():
     error_message = None
     sorted_anime_list = None
     current_year = datetime.now().year  # 取得當前年份
-    years = [current_year + i for i in range(1, 2)] + [current_year - i for i in range(0, 21)]  # 生成年份選項
+    years = [current_year + i for i in range(1, 2)] + [current_year - i for i in range(0, 8)]  # 生成年份選項
     
     if request.method == 'POST':
         year = request.form['year']
