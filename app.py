@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-app = Flask(__name__)
+app = app = Flask(__name__, template_folder='templates')
 
 # 定義排序邏輯
 def parse_date_time(anime):
