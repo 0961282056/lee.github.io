@@ -1,9 +1,22 @@
 from flask import Flask, render_template, request
+from flask_httpauth import HTTPBasicAuth
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-app = app = Flask(__name__, template_folder='templates')
+app = Flask(__name__, template_folder='templates')
+auth = HTTPBasicAuth()
+
+# 設置用戶名和密碼
+users = {
+    "0961282056": "0961282056"  # 用戶名: 密碼
+}
+
+# 驗證用戶名和密碼
+@auth.verify_password
+def verify_password(username, password):
+    if username in users and users[username] == password:
+        return username
 
 # 定義排序邏輯
 def parse_date_time(anime):
@@ -72,6 +85,7 @@ def fetch_anime_data(year, season):
 
 # 網頁路由，顯示表單和爬蟲結果
 @app.route('/', methods=['GET', 'POST'])
+@auth.login_required  # 強制需要身份驗證
 def index():
     error_message = None
     sorted_anime_list = None
