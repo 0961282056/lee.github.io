@@ -1,107 +1,140 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-    <head>
+
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>動畫資料爬蟲</title>
-    <!-- 修改網頁描述 -->
-    <meta name="description" content="動畫查詢">
+    <meta name="description" content="快速查詢動畫資料，依年份、季節、首播日期篩選">
     
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="動畫資料爬蟲">
-    <meta property="og:description" content="動畫查詢">
-    <!-- 使用公開圖片作為範例 -->
-    <meta property="og:image" content="https://via.placeholder.com/1200x630.png?text=動畫查詢">
+    <meta property="og:description" content="快速查詢動畫資料">
+    <meta property="og:image" content="data:image/png;base64,iVBORw0KGgo...">
     <meta property="og:url" content="https://lee-github-io.onrender.com/">
     <meta property="og:type" content="website">
 
-    <!-- 引入 Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-wEmeIV1mKuiNpC+IOBjI7aAzPcEZeedi5yW5f2yOq55WWLwNGmvvx4Um1vskeMj0" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet">
 
-    <!-- 引入 Select2 的 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-p34f1UUtsS3wqzfto5wAAmdvj+osOnFyQFpp4Ua3gs/ZVWx6oOypYoCJhGGScy+8" crossorigin="anonymous"></script>
+    <script>
+        $(document).ready(function () {
+            // 將頁面中的所有下拉選單應用 Select2
+            $("select").select2({
+                placeholder: "請選擇", // 可以設置占位符
+                allowClear: true       // 啟用清除按鈕
+            });
+        });
+    </script>
+    
+    <style>
+        .card img {
+            height: 200px;
+            object-fit: cover;
+        }
+    </style>
 </head>
+
 <body>
     <div class="container mt-4">
-        <h1 class="text-center">動畫資料爬蟲</h1>
+        <h1 class="text-center mb-4">動畫資料爬蟲</h1>
+        
+        <!-- 查詢表單 -->
         <form method="POST" class="mb-4">
-            <div class="mb-3">
-                <label for="year" class="form-label">選擇年份：</label>
-                <select name="year" id="year" class="form-select" required>
-                    <!-- 自動生成年份選項 -->
-                    {% for year in years %}
-                        <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
-                    {% endfor %}
-                </select>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="year" class="form-label">選擇年份：</label>
+                    <select name="year" id="year" class="form-select" required>
+                        {% for year in years %}
+                            <option value="{{ year }}" {% if year|string == selected_year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>                    
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="season" class="form-label">選擇季節：</label>
+                    <select name="season" id="season" class="form-select" required>
+                        <option value="冬" {% if selected_season == '冬' %}selected{% endif %}>冬（1月）</option>
+                        <option value="春" {% if selected_season == '春' %}selected{% endif %}>春（4月）</option>
+                        <option value="夏" {% if selected_season == '夏' %}selected{% endif %}>夏（7月）</option>
+                        <option value="秋" {% if selected_season == '秋' %}selected{% endif %}>秋（10月）</option>
+                    </select>                    
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="premiere_date" class="form-label">選擇首播日期：</label>
+                    <select name="premiere_date" id="premiere_date" class="form-select">
+                        <option value="全部" {% if premiere_date == '全部' %}selected{% endif %}>全部</option>
+                        <option value="一" {% if premiere_date == '一' %}selected{% endif %}>週一</option>
+                        <option value="二" {% if premiere_date == '二' %}selected{% endif %}>週二</option>
+                        <option value="三" {% if premiere_date == '三' %}selected{% endif %}>週三</option>
+                        <option value="四" {% if premiere_date == '四' %}selected{% endif %}>週四</option>
+                        <option value="五" {% if premiere_date == '五' %}selected{% endif %}>週五</option>
+                        <option value="六" {% if premiere_date == '六' %}selected{% endif %}>週六</option>
+                        <option value="日" {% if premiere_date == '日' %}selected{% endif %}>週日</option>
+                    </select>                    
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="season" class="form-label">選擇季節：</label>
-                <select name="season" id="season" class="form-select" required>
-                    <option value="冬">冬（1月）</option>
-                    <option value="春">春（4月）</option>
-                    <option value="夏">夏（7月）</option>
-                    <option value="秋">秋（10月）</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="premiere_date" class="form-label">選擇首播日期：</label>
-                <select name="premiere_date" id="premiere_date" class="form-select">
-                    <option value="全部" selected>全部</option>
-                    <option value="一">週一</option>
-                    <option value="二">週二</option>
-                    <option value="三">週三</option>
-                    <option value="四">週四</option>
-                    <option value="五">週五</option>
-                    <option value="六">週六</option>
-                    <option value="日">週日</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary">查詢</button>
+            <button type="submit" class="btn btn-primary w-100" id="submitButton">查詢</button>
+            <button class="btn btn-primary w-100" type="button" id="loadingButton" style="display: none;" disabled>
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Loading...
+            </button>
         </form>
         
+        <script>
+            // JavaScript 來顯示和隱藏加載動畫
+            document.getElementById('queryForm').addEventListener('submit', function() {
+                document.getElementById('submitButton').style.display = 'none';
+                document.getElementById('loadingButton').style.display = 'block';
+            });
+        </script>
+
         <!-- 顯示錯誤訊息 -->
         {% if error_message %}
-        <div class="alert alert-danger" role="alert">
+        <div class="alert alert-danger text-center" role="alert">
             {{ error_message }}
         </div>
         {% endif %}
 
-        <!-- 顯示查詢結果 -->
+        <!-- 查詢結果區 -->
         {% if sorted_anime_list %}
-        <h2>動畫結果：</h2>
+        <h2 class="mb-3">動畫結果：</h2>
         <div class="row">
             {% for anime in sorted_anime_list %}
             <div class="col-md-4">
                 <div class="card mb-4">
-                    <img src="{{ anime.anime_image_url }}" class="card-img-top" alt="動畫圖片" style="height: 200px; object-fit: cover;">
+                    <img src="{{ anime.anime_image_url }}" class="card-img-top" alt="動畫圖片">
                     <div class="card-body">
-                        <h5 class="card-title">動畫名稱:{{ anime.anime_name }}</h5>
-                        <p class="card-text">首播日期：{{ anime.premiere_date }} <br>首播時間：{{ anime.premiere_time }}</p>
+                        <h5 class="card-title">動畫名稱：{{ anime.anime_name }}</h5>
+                        <p class="card-text">
+                            首播日期：{{ anime.premiere_date }} <br>
+                            首播時間：{{ anime.premiere_time }}
+                        </p>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <div class="alert alert-info" role="alert">
+        <div class="alert alert-info text-center" role="alert">
             請查詢並顯示資料。
         </div>
         {% endif %}
     </div>
-
-    <!-- 引入 Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pzjw8f+ua7Kw1TIq0Sn+3PU6A3wBxt1LsmZmFlbA72cJ51tGc3V0FZtPbLPpG82F" crossorigin="anonymous"></script>
-
+    <!-- JQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script>
-        // 初始化所有的 select 元素
-        $(document).ready(function() {
-            $('#year').select2();
-            $('#season').select2();
-            $('#premiere_date').select2();
+        $(document).ready(function () {
+            // 初始化所有下拉選單
+            $("select").select2({
+                
+            });
         });
     </script>
 </body>
+
 </html>
