@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_httpauth import HTTPBasicAuth
 import requests
 from bs4 import BeautifulSoup
@@ -22,8 +22,33 @@ def verify_password(username, password):
         return username
     return None
 
+# LINE API 發送訊息的路由
+LINE_API_URL = 'https://api.line.me/v2/bot/message/push'
+LINE_TOKEN = 'tKoRRRQUP+AbMeuxU5QueF3IKdkD51bun+e3Ji1IL8SAFcoFqZMFmXfXiv+hX36Iz/U5ivj8Sze4uV47Voi/1ISoZ+tYppO5oPgjOl2GVwVY8IYjLhIUNEsEISbz8l0qClAwr35wwmFx7WEHO0Ua/gdB04t89/1O/w1cDnyilFU='  # 替換為你的 channel token
+
+@app.route('/send-line-message', methods=['POST'])
+def send_line_message():
+    data = request.json  # 從前端接收的資料
+
+    # 檢查是否提供了有效的 'to' 屬性
+    if not data.get('to'):
+        return jsonify({"status": "error", "message": "'to' field is missing or invalid"}), 400
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {LINE_TOKEN}'
+    }
+
+    # 發送請求到 LINE API
+    response = requests.post(LINE_API_URL, headers=headers, json=data)
+
+    if response.status_code == 200:
+        return jsonify({"status": "success"}), 200
+    else:
+        return jsonify({"status": "error", "message": response.text}), 500
+
+
 # 定義排序邏輯，根據首播日期與時間排序
-# 日期順序：週一到週日；時間順序：最早到最晚
 def parse_date_time(anime):
     weekday_map = {'日': 7, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6}
     try:

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>動畫資料爬蟲</title>
     <meta name="description" content="快速查詢動畫資料，依年份、季節、首播日期篩選">
-    
+
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="動畫資料爬蟲">
     <meta property="og:description" content="快速查詢動畫資料">
@@ -14,23 +14,49 @@
     <meta property="og:url" content="https://lee-github-io.onrender.com/">
     <meta property="og:type" content="website">
 
+    <!-- CSS Libraries -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet">
 
-    <script>
-        $(document).ready(function () {
-            // 將頁面中的所有下拉選單應用 Select2
-            $("select").select2({
-                placeholder: "請選擇", // 可以設置占位符
-                allowClear: true       // 啟用清除按鈕
-            });
-        });
-    </script>
-    
     <style>
         .card img {
             height: 200px;
             object-fit: cover;
+        }
+
+        #copyButton {
+            position: fixed;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            z-index: 1000;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #007bff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #copyButton:hover {
+            background-color: #0056b3;
+        }
+
+        .share-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .share-item img {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
         }
     </style>
 </head>
@@ -38,7 +64,7 @@
 <body>
     <div class="container mt-4">
         <h1 class="text-center mb-4">動畫資料爬蟲</h1>
-        
+
         <!-- 查詢表單 -->
         <form method="POST" class="mb-4">
             <div class="row">
@@ -46,9 +72,9 @@
                     <label for="year" class="form-label">選擇年份：</label>
                     <select name="year" id="year" class="form-select" required>
                         {% for year in years %}
-                            <option value="{{ year }}" {% if year|string == selected_year %}selected{% endif %}>{{ year }}</option>
+                        <option value="{{ year }}" {% if year|string == selected_year %}selected{% endif %}>{{ year }}</option>
                         {% endfor %}
-                    </select>                    
+                    </select>
                 </div>
                 <div class="col-md-4 mb-3">
                     <label for="season" class="form-label">選擇季節：</label>
@@ -57,7 +83,7 @@
                         <option value="春" {% if selected_season == '春' %}selected{% endif %}>春（4月）</option>
                         <option value="夏" {% if selected_season == '夏' %}selected{% endif %}>夏（7月）</option>
                         <option value="秋" {% if selected_season == '秋' %}selected{% endif %}>秋（10月）</option>
-                    </select>                    
+                    </select>
                 </div>
                 <div class="col-md-4 mb-3">
                     <label for="premiere_date" class="form-label">選擇首播日期：</label>
@@ -70,23 +96,11 @@
                         <option value="五" {% if premiere_date == '五' %}selected{% endif %}>週五</option>
                         <option value="六" {% if premiere_date == '六' %}selected{% endif %}>週六</option>
                         <option value="日" {% if premiere_date == '日' %}selected{% endif %}>週日</option>
-                    </select>                    
+                    </select>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100" id="submitButton">查詢</button>
-            <button class="btn btn-primary w-100" type="button" id="loadingButton" style="display: none;" disabled>
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Loading...
-            </button>
+            <button type="submit" class="btn btn-primary w-100">查詢</button>
         </form>
-        
-        <script>
-            // JavaScript 來顯示和隱藏加載動畫
-            document.getElementById('queryForm').addEventListener('submit', function() {
-                document.getElementById('submitButton').style.display = 'none';
-                document.getElementById('loadingButton').style.display = 'block';
-            });
-        </script>
 
         <!-- 顯示錯誤訊息 -->
         {% if error_message %}
@@ -104,11 +118,12 @@
                 <div class="card mb-4">
                     <img src="{{ anime.anime_image_url }}" class="card-img-top" alt="動畫圖片">
                     <div class="card-body">
-                        <h5 class="card-title">動畫名稱：{{ anime.anime_name }}</h5>
+                        <h5 class="card-title">{{ anime.anime_name }}</h5>
                         <p class="card-text">
                             首播日期：{{ anime.premiere_date }} <br>
                             首播時間：{{ anime.premiere_time }}
                         </p>
+                        <button type="button" class="btn btn-success add-to-sharelist">加入分享清單</button>
                     </div>
                 </div>
             </div>
@@ -119,22 +134,150 @@
             請查詢並顯示資料。
         </div>
         {% endif %}
+
+        <!-- 分享清單區 -->
+        <h2 class="mt-4">分享清單：</h2>
+        <div id="shareList" class="mb-3"></div>
+        <button id="copyButton" class="btn btn-primary" style="display: none;">+</button>
     </div>
-    <!-- JQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <!-- Bootstrap JS -->
+
+    <!-- JS Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         $(document).ready(function () {
-            // 初始化所有下拉選單
-            $("select").select2({
-                
+            $("select").select2();
+    
+            let shareList = [];
+    
+            $(".add-to-sharelist").click(function () {
+                let animeCard = $(this).closest('.card');
+                let animeData = {
+                    name: animeCard.find('.card-title').text(),
+                    image: animeCard.find('img').attr('src')
+                };
+    
+                shareList.push(animeData);
+                updateShareList();
+    
+                Swal.fire({
+                    title: '成功',
+                    text: '已加入分享清單！',
+                    icon: 'success',
+                    timer: 1200,
+                    showConfirmButton: false
+                });
             });
+    
+            function updateShareList() {
+                let shareListContainer = $('#shareList');
+                shareListContainer.empty();
+    
+                if (shareList.length > 0) {
+                    shareList.forEach(function (anime) {
+                        shareListContainer.append(`
+                            <div class="share-item">
+                                <img src="${anime.image}" alt="${anime.name}">
+                                <span>${anime.name}</span>
+                            </div>
+                        `);
+                    });
+                    $('#copyButton').show();
+                } else {
+                    $('#copyButton').hide();
+                }
+            }
+    
+            $('#copyButton').click(function () {
+                // 定義 LINE 的 channel token，請替換為你的 token
+                const lineToken = 'tKoRRRQUP+AbMeuxU5QueF3IKdkD51bun+e3Ji1IL8SAFcoFqZMFmXfXiv+hX36Iz/U5ivj8Sze4uV47Voi/1ISoZ+tYppO5oPgjOl2GVwVY8IYjLhIUNEsEISbz8l0qClAwr35wwmFx7WEHO0Ua/gdB04t89/1O/w1cDnyilFU='; 
+                // 接收訊息的用戶 ID，請替換為實際的 userId
+                const userId = 'Uc5ebcfbda2c70f9c79b7addd799b678c'; 
+
+                // 構建發送的訊息數據，將所有的圖片和名稱合併為一條 Flex Message
+                const messages = [{
+                    type: 'flex',  // 設定為 Flex Message 類型
+                    altText: '動態圖片和名稱',  // 設定替代文字
+                    contents: {
+                        type: 'carousel',  // 使用 carousel 來顯示多個項目
+                        contents: shareList.map(anime => ({
+                            type: 'bubble',  // 設定為單個訊息泡泡 (bubble)
+                            hero: {
+                                type: 'image',
+                                url: anime.image,  // 使用動畫項目的圖片 URL
+                                size: 'full',  // 圖片大小設為全屏
+                                aspectRatio: '20:13',  // 設定圖片顯示比例
+                                aspectMode: 'fit'  // 使用 "fit" 模式避免裁剪圖片
+                            },
+                            body: {
+                                type: 'box',
+                                layout: 'vertical',  // 設定內容為垂直排列
+                                contents: [
+                                    {
+                                        type: 'text',
+                                        text: anime.name,  // 顯示動畫名稱
+                                        weight: 'bold',  // 設定文字加粗
+                                        size: 'lg',  // 設定字體大小為大
+                                        wrap: true  // 文字過長時會換行
+                                    }
+                                ]
+                            }
+                        }))
+                    }
+                }];
+
+                // 設定要發送的數據，包括接收者的 ID 和訊息內容
+                const data = {
+                    to: userId,  // 要發送訊息的用戶 ID
+                    messages: messages  // 設定要發送的訊息內容（這裡是我們剛才構建的 Flex Message）
+                };
+
+                // 發送請求到後端 API，後端再將請求轉發到 LINE API
+                fetch('/send-line-message', {
+                    method: 'POST',  // 設定 HTTP 方法為 POST
+                    headers: {
+                        'Content-Type': 'application/json'  // 設定請求的內容類型為 JSON
+                    },
+                    body: JSON.stringify(data)  // 將數據轉換為 JSON 格式發送
+                }).then(response => {
+                    // 當後端回應成功時，顯示成功訊息
+                    if (response.ok) {
+                        Swal.fire({
+                            title: '成功',
+                            text: '名稱和圖片已發送至 LINE！',  // 顯示成功的提示文字
+                            icon: 'success',
+                            timer: 1500,  // 設定自動關閉提示框的時間
+                            showConfirmButton: false  // 不顯示確認按鈕
+                        });
+                    } else {
+                        // 如果發送失敗，顯示失敗訊息
+                        Swal.fire({
+                            title: '失敗',
+                            text: '發送失敗，請稍後再試！',  // 顯示失敗的提示文字
+                            icon: 'error',
+                            confirmButtonText: '確定'  // 顯示確認按鈕
+                        });
+                    }
+                }).catch(error => {
+                    // 處理錯誤情況，顯示錯誤提示
+                    console.error('錯誤', error);  // 在控制台輸出錯誤訊息
+                    Swal.fire({
+                        title: '失敗',
+                        text: '發送過程中出現錯誤，請稍後再試！',  // 顯示發送錯誤的提示文字
+                        icon: 'error',
+                        confirmButtonText: '確定'  // 顯示確認按鈕
+                    });
+                });
+            });
+
+
+   
         });
     </script>
+    
 </body>
 
 </html>
