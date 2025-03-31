@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,9 +18,42 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet">
 
     <style>
+        .card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
         .card img {
             height: 200px;
             object-fit: cover;
+            width: 100%;
+        }
+
+        .card-body {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            min-height: 48px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            cursor: pointer; /* 提示用戶此處可交互 */
+        }
+
+        .card-title.long-pressed {
+            background-color: #e0e0e0; /* 長按時的視覺反饋 */
+        }
+
+        .card-text {
+            margin-bottom: 10px;
         }
 
         #copyButton {
@@ -112,13 +144,13 @@
         <!-- 查詢結果區 -->
         {% if sorted_anime_list %}
         <h2 class="mb-3">動畫結果：</h2>
-        <div class="row">
+        <div class="row row-cols-1 row-cols-md-3 g-4">
             {% for anime in sorted_anime_list %}
-            <div class="col-md-4">
+            <div class="col">
                 <div class="card mb-4">
                     <img src="{{ anime.anime_image_url }}" class="card-img-top" alt="動畫圖片">
                     <div class="card-body">
-                        <h5 class="card-title">{{ anime.anime_name }}</h5>
+                        <h5 class="card-title" data-anime-name="{{ anime.anime_name }}">{{ anime.anime_name }}</h5>
                         <p class="card-text">
                             首播日期：{{ anime.premiere_date }} <br>
                             首播時間：{{ anime.premiere_time }}
@@ -150,19 +182,56 @@
     <script>
         $(document).ready(function () {
             $("select").select2();
-    
+
             let shareList = [];
-    
+            let pressTimer; // 用於計時長按
+
+            // 長按事件處理
+            $('.card-title').on('touchstart mousedown', function (e) {
+                const $this = $(this);
+                const animeName = $this.data('anime-name'); // 從 data-anime-name 獲取動畫名稱
+
+                // 設置計時器，800ms 後視為長按
+                pressTimer = setTimeout(function () {
+                    $this.addClass('long-pressed'); // 添加長按視覺效果
+
+                    // 複製到剪貼簿
+                    navigator.clipboard.writeText(animeName).then(() => {
+                        Swal.fire({
+                            title: '已複製',
+                            text: `${animeName} 已複製到剪貼簿！`,
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            $this.removeClass('long-pressed'); // 提示結束後移除長按效果
+                        });
+                    }).catch(err => {
+                        Swal.fire({
+                            title: '失敗',
+                            text: '複製失敗，請稍後再試！',
+                            icon: 'error',
+                            confirmButtonText: '確定'
+                        });
+                        console.error('複製失敗：', err);
+                    });
+                }, 800); // 800ms 為長按時間閾值
+            }).on('touchend touchcancel mouseup', function () {
+                clearTimeout(pressTimer); // 取消計時器
+                $(this).removeClass('long-pressed'); // 移除長按效果
+            });
+
+            // 加入分享清單
             $(".add-to-sharelist").click(function () {
                 let animeCard = $(this).closest('.card');
                 let animeData = {
                     name: animeCard.find('.card-title').text(),
                     image: animeCard.find('img').attr('src')
                 };
-    
+
                 shareList.push(animeData);
                 updateShareList();
-    
+
                 Swal.fire({
                     title: '成功',
                     text: '已加入分享清單！',
@@ -171,11 +240,11 @@
                     showConfirmButton: false
                 });
             });
-    
+
             function updateShareList() {
                 let shareListContainer = $('#shareList');
                 shareListContainer.empty();
-    
+
                 if (shareList.length > 0) {
                     shareList.forEach(function (anime) {
                         shareListContainer.append(`
@@ -190,94 +259,79 @@
                     $('#copyButton').hide();
                 }
             }
-    
-            $('#copyButton').click(function () {
-                // 定義 LINE 的 channel token，請替換為你的 token
-                const lineToken = 'tKoRRRQUP+AbMeuxU5QueF3IKdkD51bun+e3Ji1IL8SAFcoFqZMFmXfXiv+hX36Iz/U5ivj8Sze4uV47Voi/1ISoZ+tYppO5oPgjOl2GVwVY8IYjLhIUNEsEISbz8l0qClAwr35wwmFx7WEHO0Ua/gdB04t89/1O/w1cDnyilFU='; 
-                // 接收訊息的用戶 ID，請替換為實際的 userId
-                const userId = 'Uc5ebcfbda2c70f9c79b7addd799b678c'; 
 
-                // 構建發送的訊息數據，將所有的圖片和名稱合併為一條 Flex Message
+            $('#copyButton').click(function () {
+                const lineToken = 'tKoRRRQUP+AbMeuxU5QueF3IKdkD51bun+e3Ji1IL8SAFcoFqZMFmXfXiv+hX36Iz/U5ivj8Sze4uV47Voi/1ISoZ+tYppO5oPgjOl2GVwVY8IYjLhIUNEsEISbz8l0qClAwr35wwmFx7WEHO0Ua/gdB04t89/1O/w1cDnyilFU=';
+                const userId = 'Uc5ebcfbda2c70f9c79b7addd799b678c';
+
                 const messages = [{
-                    type: 'flex',  // 設定為 Flex Message 類型
-                    altText: '動態圖片和名稱',  // 設定替代文字
+                    type: 'flex',
+                    altText: '動態圖片和名稱',
                     contents: {
-                        type: 'carousel',  // 使用 carousel 來顯示多個項目
+                        type: 'carousel',
                         contents: shareList.map(anime => ({
-                            type: 'bubble',  // 設定為單個訊息泡泡 (bubble)
+                            type: 'bubble',
                             hero: {
                                 type: 'image',
-                                url: anime.image,  // 使用動畫項目的圖片 URL
-                                size: 'full',  // 圖片大小設為全屏
-                                aspectRatio: '20:13',  // 設定圖片顯示比例
-                                aspectMode: 'fit'  // 使用 "fit" 模式避免裁剪圖片
+                                url: anime.image,
+                                size: 'full',
+                                aspectRatio: '20:13',
+                                aspectMode: 'fit'
                             },
                             body: {
                                 type: 'box',
-                                layout: 'vertical',  // 設定內容為垂直排列
-                                contents: [
-                                    {
-                                        type: 'text',
-                                        text: anime.name,  // 顯示動畫名稱
-                                        weight: 'bold',  // 設定文字加粗
-                                        size: 'lg',  // 設定字體大小為大
-                                        wrap: true  // 文字過長時會換行
-                                    }
-                                ]
+                                layout: 'vertical',
+                                contents: [{
+                                    type: 'text',
+                                    text: anime.name,
+                                    weight: 'bold',
+                                    size: 'lg',
+                                    wrap: true
+                                }]
                             }
                         }))
                     }
                 }];
 
-                // 設定要發送的數據，包括接收者的 ID 和訊息內容
                 const data = {
-                    to: userId,  // 要發送訊息的用戶 ID
-                    messages: messages  // 設定要發送的訊息內容（這裡是我們剛才構建的 Flex Message）
+                    to: userId,
+                    messages: messages
                 };
 
-                // 發送請求到後端 API，後端再將請求轉發到 LINE API
                 fetch('/send-line-message', {
-                    method: 'POST',  // 設定 HTTP 方法為 POST
+                    method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'  // 設定請求的內容類型為 JSON
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(data)  // 將數據轉換為 JSON 格式發送
+                    body: JSON.stringify(data)
                 }).then(response => {
-                    // 當後端回應成功時，顯示成功訊息
                     if (response.ok) {
                         Swal.fire({
                             title: '成功',
-                            text: '名稱和圖片已發送至 LINE！',  // 顯示成功的提示文字
+                            text: '名稱和圖片已發送至 LINE！',
                             icon: 'success',
-                            timer: 1500,  // 設定自動關閉提示框的時間
-                            showConfirmButton: false  // 不顯示確認按鈕
+                            timer: 1500,
+                            showConfirmButton: false
                         });
                     } else {
-                        // 如果發送失敗，顯示失敗訊息
                         Swal.fire({
                             title: '失敗',
-                            text: '發送失敗，請稍後再試！',  // 顯示失敗的提示文字
+                            text: '發送失敗，請稍後再試！',
                             icon: 'error',
-                            confirmButtonText: '確定'  // 顯示確認按鈕
+                            confirmButtonText: '確定'
                         });
                     }
                 }).catch(error => {
-                    // 處理錯誤情況，顯示錯誤提示
-                    console.error('錯誤', error);  // 在控制台輸出錯誤訊息
+                    console.error('錯誤', error);
                     Swal.fire({
                         title: '失敗',
-                        text: '發送過程中出現錯誤，請稍後再試！',  // 顯示發送錯誤的提示文字
+                        text: '發送過程中出現錯誤，請稍後再試！',
                         icon: 'error',
-                        confirmButtonText: '確定'  // 顯示確認按鈕
+                        confirmButtonText: '確定'
                     });
                 });
             });
-
-
-   
         });
     </script>
-    
 </body>
-
 </html>
