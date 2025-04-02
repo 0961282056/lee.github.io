@@ -184,19 +184,17 @@
             $("select").select2();
 
             let shareList = [];
-            let pressTimer; // 用於計時長按
+            let pressTimer;
 
-            // 長按事件處理
+            // 長按事件（優化後）
             $('.card-title').on('touchstart mousedown', function (e) {
+                e.preventDefault(); // 阻止瀏覽器默認行為
                 const $this = $(this);
-                const animeName = $this.data('anime-name'); // 從 data-anime-name 獲取動畫名稱
+                const animeName = $this.data('anime-name');
 
-                // 設置計時器，800ms 後視為長按
                 pressTimer = setTimeout(function () {
-                    $this.addClass('long-pressed'); // 添加長按視覺效果
-
-                    // 複製到剪貼簿
-                    navigator.clipboard.writeText(animeName).then(() => {
+                    $this.addClass('long-pressed');
+                    copyToClipboard(animeName).then(() => {
                         Swal.fire({
                             title: '已複製',
                             text: `${animeName} 已複製到剪貼簿！`,
@@ -204,7 +202,7 @@
                             timer: 1500,
                             showConfirmButton: false
                         }).then(() => {
-                            $this.removeClass('long-pressed'); // 提示結束後移除長按效果
+                            $this.removeClass('long-pressed');
                         });
                     }).catch(err => {
                         Swal.fire({
@@ -215,11 +213,59 @@
                         });
                         console.error('複製失敗：', err);
                     });
-                }, 800); // 800ms 為長按時間閾值
-            }).on('touchend touchcancel mouseup', function () {
-                clearTimeout(pressTimer); // 取消計時器
-                $(this).removeClass('long-pressed'); // 移除長按效果
+                }, 800);
+            }).on('touchend touchcancel mouseup mouseleave', function () {
+                clearTimeout(pressTimer);
+                $(this).removeClass('long-pressed');
             });
+
+            // 點擊事件（主要推薦）
+            $('.card-title').on('click', function (e) {
+                const $this = $(this);
+                const animeName = $this.data('anime-name');
+
+                Swal.fire({
+                    title: '操作選擇',
+                    text: `您想複製 "${animeName}" 嗎？`,
+                    showCancelButton: true,
+                    confirmButtonText: '複製',
+                    cancelButtonText: '取消'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        copyToClipboard(animeName).then(() => {
+                            Swal.fire({
+                                title: '已複製',
+                                text: `${animeName} 已複製到剪貼簿！`,
+                                icon: 'success',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        }).catch(err => {
+                            Swal.fire({
+                                title: '失敗',
+                                text: '複製失敗，請稍後再試！',
+                                icon: 'error',
+                                confirmButtonText: '確定'
+                            });
+                        });
+                    }
+                });
+            });
+
+            // 複製到剪貼簿的通用函數
+            function copyToClipboard(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    return navigator.clipboard.writeText(text);
+                } else {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    return Promise.resolve();
+                }
+            }
 
             // 加入分享清單
             $(".add-to-sharelist").click(function () {
