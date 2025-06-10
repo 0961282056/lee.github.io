@@ -182,12 +182,13 @@
 
     <script>
         $(document).ready(function () {
+            // 初始化 Select2 下拉選單
             $("select").select2();
 
-            let shareList = [];
-            let pressTimer;
+            let shareList = []; // 儲存分享清單數據
+            let pressTimer; // 長按計時器
 
-            // 長按事件（优化的長按邏輯）
+            // 長按事件：複製動畫名稱
             $('.card-title').on('touchstart mousedown', function (e) {
                 e.preventDefault(); // 阻止瀏覽器默認行為
                 const $this = $(this);
@@ -220,7 +221,7 @@
                 $(this).removeClass('long-pressed');
             });
 
-            // 點擊事件（主要推薦）
+            // 點擊事件：彈出複製確認框
             $('.card-title').on('click', function (e) {
                 const $this = $(this);
                 const animeName = $this.data('anime-name');
@@ -253,7 +254,7 @@
                 });
             });
 
-            // 複製到剪貼簿的通用函數（用於複製文字）
+            // 複製到剪貼簿的通用函數（文字）
             function copyToClipboard(text) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     return navigator.clipboard.writeText(text);
@@ -273,7 +274,9 @@
                 let animeCard = $(this).closest('.card');
                 let animeData = {
                     name: animeCard.find('.card-title').text(),
-                    image: animeCard.find('img').attr('src')
+                    image: animeCard.find('img').attr('src'),
+                    premiere_date: animeCard.find('.card-text').contents()[0].textContent.replace('首播日期：', '').trim(),
+                    premiere_time: animeCard.find('.card-text').contents()[2].textContent.replace('首播時間：', '').trim()
                 };
 
                 shareList.push(animeData);
