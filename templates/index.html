@@ -67,7 +67,7 @@
             border-radius: 50%;
             background-color: #007bff;
             color: white;
-            display: flex;
+            display: none; /* 初始隱藏，當分享清單有內容時顯示 */
             align-items: center;
             justify-content: center;
             font-size: 18px;
@@ -170,7 +170,7 @@
         <!-- 分享清單區 -->
         <h2 class="mt-4">分享清單：</h2>
         <div id="shareList" class="mb-3"></div>
-        <button id="copyButton" class="btn btn-primary" style="display: none;">+</button>
+        <button id="copyButton" class="btn btn-primary" title="複製分享清單為圖片">+</button>
     </div>
 
     <!-- JS Libraries -->
@@ -178,6 +178,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <script>
         $(document).ready(function () {
@@ -221,7 +222,7 @@
 
             // 點擊事件（主要推薦）
             $('.card-title').on('click', function (e) {
-                const $this = $(this);
+                const $this = personally(this);
                 const animeName = $this.data('anime-name');
 
                 Swal.fire({
@@ -252,7 +253,7 @@
                 });
             });
 
-            // 複製到剪貼簿的通用函數
+            // 複製到剪貼簿的通用函數（用於複製文字）
             function copyToClipboard(text) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     return navigator.clipboard.writeText(text);
@@ -287,6 +288,7 @@
                 });
             });
 
+            // 更新分享清單
             function updateShareList() {
                 let shareListContainer = $('#shareList');
                 shareListContainer.empty();
@@ -300,81 +302,55 @@
                             </div>
                         `);
                     });
-                    $('#copyButton').show();
+                    $('#copyButton').show(); // 顯示複製按鈕
                 } else {
-                    $('#copyButton').hide();
+                    $('#copyButton').hide(); // 隱藏複製按鈕
                 }
             }
 
+            // 複製分享清單為圖片
             $('#copyButton').click(function () {
-                const lineToken = 'tKoRRRQUP+AbMeuxU5QueF3IKdkD51bun+e3Ji1IL8SAFcoFqZMFmXfXiv+hX36Iz/U5ivj8Sze4uV47Voi/1ISoZ+tYppO5oPgjOl2GVwVY8IYjLhIUNEsEISbz8l0qClAwr35wwmFx7WEHO0Ua/gdB04t89/1O/w1cDnyilFU=';
-                const userId = 'Uc5ebcfbda2c70f9c79b7addd799b678c';
+                const shareListElement = document.getElementById('shareList');
 
-                const messages = [{
-                    type: 'flex',
-                    altText: '動態圖片和名稱',
-                    contents: {
-                        type: 'carousel',
-                        contents: shareList.map(anime => ({
-                            type: 'bubble',
-                            hero: {
-                                type: 'image',
-                                url: anime.image,
-                                size: 'full',
-                                aspectRatio: '20:13',
-                                aspectMode: 'fit'
-                            },
-                            body: {
-                                type: 'box',
-                                layout: 'vertical',
-                                contents: [{
-                                    type: 'text',
-                                    text: anime.name,
-                                    weight: 'bold',
-                                    size: 'lg',
-                                    wrap: true
-                                }]
-                            }
-                        }))
-                    }
-                }];
+                if (shareList.length === 0) {
+                    Swal.fire({
+                        title: '無內容',
+                        text: '分享清單為空，請先添加動畫！',
+                        icon: 'warning',
+                        confirmButtonText: '確定'
+                    });
+                    return;
+                }
 
-                const data = {
-                    to: userId,
-                    messages: messages
-                };
-
-                fetch('/send-line-message', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                }).then(response => {
-                    if (response.ok) {
-                        Swal.fire({
-                            title: '成功',
-                            text: '名稱和圖片已發送至 LINE！',
-                            icon: 'success',
-                            timer: 1500,
-                            showConfirmButton: false
+                html2canvas(shareListElement, { scale: 2 }).then(canvas => {
+                    canvas.toBlob(blob => {
+                        const item = new ClipboardItem({ 'image/png': blob });
+                        navigator.clipboard.write([item]).then(() => {
+                            Swal.fire({
+                                title: '已複製',
+                                text: '分享清單已作為圖片複製到剪貼簿！',
+                                icon: 'success',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        }).catch(err => {
+                            Swal.fire({
+                                title: '失敗',
+                                text: '複製圖片失敗，請稍後再試！',
+                                icon: 'error',
+                                confirmButtonText: '確定'
+                            });
+                            console.error('圖片複製失敗：', err);
                         });
-                    } else {
-                        Swal.fire({
-                            title: '失敗',
-                            text: '發送失敗，請稍後再試！',
-                            icon: 'error',
-                            confirmButtonText: '確定'
-                        });
-                    }
-                }).catch(error => {
-                    console.error('錯誤', error);
+                    });
+                }).catch(err => {
                     Swal.fire({
                         title: '失敗',
-                        text: '發送過程中出現錯誤，請稍後再試！',
+                        text: '生成圖片失敗，請聯繫管理員！',
                         icon: 'error',
                         confirmButtonText: '確定'
                     });
+                    console.error('html2canvas 錯誤：', err);
                 });
             });
         });
