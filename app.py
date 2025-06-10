@@ -97,22 +97,25 @@ def fetch_anime_data(year: str, season: str) -> List[Dict]:
                          .img['src'] if item.find('div', class_='overflow-hidden anime_bg')
                          and item.find('div', class_='overflow-hidden anime_bg').img else "無圖片")
             if image_url != "無圖片":
-                try:
-                    # 下載圖片
-                    response = requests.get(image_url, timeout=5)
-                    response.raise_for_status()
-                    # 提取檔案名
-                    parsed_url = urlparse(image_url)
-                    filename = os.path.basename(parsed_url.path)
-                    local_path = os.path.join(IMAGE_DIR, filename)
-                    # 保存圖片
-                    with open(local_path, 'wb') as f:
-                        f.write(response.content)
-                    # 使用本地 URL
+                parsed_url = urlparse(image_url)
+                filename = os.path.basename(parsed_url.path)
+                local_path = os.path.join(IMAGE_DIR, filename)
+                if os.path.exists(local_path):  # 檢查圖片是否已存在
+                    print(f"圖片已存在，使用本地路徑: {local_path}")
                     image_url = f"/static/images/{filename}"
-                except requests.RequestException as e:
-                    print(f"圖片下載失敗: {image_url}, 錯誤: {e}")
-                    image_url = "無圖片"
+                else:
+                    try:
+                        # 下載圖片
+                        response = requests.get(image_url, timeout=5)
+                        response.raise_for_status()
+                        # 保存圖片
+                        with open(local_path, 'wb') as f:
+                            f.write(response.content)
+                        print(f"圖片下載成功並儲存至: {local_path}")
+                        image_url = f"/static/images/{filename}"
+                    except requests.RequestException as e:
+                        print(f"圖片下載失敗: {image_url}, 錯誤: {e}")
+                        image_url = "無圖片"
             anime_list.append({  # 構建動畫資料字典
                 'bangumi_id': item.get('acgs-bangumi-data-id', "未知ID"),  # 獲取動畫 ID
                 'anime_name': (item.find('div', class_='anime_name').text.strip()

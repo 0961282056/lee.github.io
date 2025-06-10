@@ -78,17 +78,17 @@
             background-color: #0056b3;
         }
 
-        .share-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
+        #shareList .card img {
+            height: 350px; /* 與動畫結果的圖片高度一致 */
+            object-fit: cover;
+            width: 100%;
         }
 
-        .share-item img {
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            margin-right: 10px;
+        #shareList .card-body {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
     </style>
 </head>
@@ -169,7 +169,7 @@
 
         <!-- 分享清單區 -->
         <h2 class="mt-4">分享清單：</h2>
-        <div id="shareList" class="mb-3"></div>
+        <div id="shareList" class="row row-cols-1 row-cols-md-3 g-4 mb-3"></div>
         <button id="copyButton" class="btn btn-primary" title="複製分享清單為圖片">+</button>
     </div>
 
@@ -187,7 +187,7 @@
             let shareList = [];
             let pressTimer;
 
-            // 長按事件（優化後）
+            // 長按事件（优化的長按邏輯）
             $('.card-title').on('touchstart mousedown', function (e) {
                 e.preventDefault(); // 阻止瀏覽器默認行為
                 const $this = $(this);
@@ -222,7 +222,7 @@
 
             // 點擊事件（主要推薦）
             $('.card-title').on('click', function (e) {
-                const $this = personally(this);
+                const $this = $(this);
                 const animeName = $this.data('anime-name');
 
                 Swal.fire({
@@ -296,9 +296,13 @@
                 if (shareList.length > 0) {
                     shareList.forEach(function (anime) {
                         shareListContainer.append(`
-                            <div class="share-item">
-                                <img src="${anime.image}" alt="${anime.name}">
-                                <span>${anime.name}</span>
+                            <div class="col">
+                                <div class="card mb-4">
+                                    <img src="${anime.image}" class="card-img-top" alt="${anime.name}">
+                                    <div class="card-body">
+                                        <h5 class="card-title" data-anime-name="${anime.name}">${anime.name}</h5>
+                                    </div>
+                                </div>
                             </div>
                         `);
                     });
