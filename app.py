@@ -92,43 +92,40 @@ def parse_date_time(anime: Dict) -> Tuple[int, datetime]:
     except (ValueError, KeyError):  # 處理時間格式錯誤或鍵缺失
         return 7, datetime.max  # 返回最大值，確保無效資料排在最後
 
-@cache.cached(timeout=3600)  # 快取結果 1 小時
+@cache.cached(timeout=3600, key_prefix=lambda: f"anime_{year}_{season}")
 def fetch_anime_data(year: str, season: str) -> List[Dict]:
-    """從網站抓取並整理動畫資料
-    Args:
-        year: 要查詢的年份
-        season: 要查詢的季節（冬、春、夏、秋）
-    Returns:
-        排序後的動畫資料列表，或錯誤訊息列表
-    """
-    if season not in SEASON_TO_MONTH:  # 驗證季節是否有效
+    print(f"Fetching data for year: {year}, season: {season}")
+    if season not in SEASON_TO_MONTH:
         return [{"error": "季節無效，請輸入有效季節（冬、春、夏、秋）"}]
-    month = SEASON_TO_MONTH[season]  # 將季節轉換為對應月份
-    url = f"https://acgsecrets.hk/bangumi/{year}{month:02d}/"  # 構建目標 URL
+    month = SEASON_TO_MONTH[season]
+    url = f"https://acgsecrets.hk/bangumi/{year}{month:02d}/"
+    print(f"Fetching URL: {url}")
     try:
-        response = requests.get(url, timeout=10)  # 發送 GET 請求，設置 10 秒超時
-        response.raise_for_status()  # 檢查請求是否成功
-        response.encoding = 'utf-8'  # 強制設置 UTF-8 編碼
-        soup = BeautifulSoup(response.text, 'html.parser')  # 解析 HTML
-        anime_data = soup.find('div', id='acgs-anime-icons')  # 查找動畫資料區塊
-        if not anime_data:  # 如果沒找到資料
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        response.encoding = 'utf-8'
+        soup = BeautifulSoup(response.text, 'html.parser')
+        anime_data = soup.find('div', id='acgs-anime-icons')
+        if not anime_data:
             return [{"error": "未找到任何動畫資料"}]
-        anime_list = []  # 初始化動畫列表
-        for item in anime_data.find_all('div', class_='CV-search'):  # 遍歷每個動畫項目
-            anime_list.append({  # 構建動畫資料字典
-                'bangumi_id': item.get('acgs-bangumi-data-id', "未知ID"),  # 獲取動畫 ID
+        anime_list = []
+        for item in anime_data.find_all('div', class_='CV-search'):
+            premiere_date = item.find('div', class_='day').text.strip() if item.find('div', class_='day') else "無首播日期"
+            premiere_date = premiere_date.replace("星期", "") if "星期" in premiere_date else premiere_date
+            anime_list.append({
+                'bangumi_id': item.get('acgs-bangumi-data-id', "未知ID"),
                 'anime_name': (item.find('div', class_='anime_name').text.strip() 
-                              if item.find('div', class_='anime_name') else "無名稱"),  # 動畫名稱
+                              if item.find('div', class_='anime_name') else "無名稱"),
                 'anime_image_url': (item.find('div', class_='overflow-hidden anime_bg')
                                   .img['src'] if item.find('div', class_='overflow-hidden anime_bg') 
-                                  and item.find('div', class_='overflow-hidden anime_bg').img else "無圖片"),  # 圖片 URL
-                'premiere_date': (item.find('div', class_='day').text.strip() 
-                                if item.find('div', class_='day') else "無首播日期"),  # 首播日期
+                                  and item.find('div', class_='overflow-hidden anime_bg').img else "無圖片"),
+                'premiere_date': premiere_date,
                 'premiere_time': (item.find('div', class_='time').text.strip() 
-                                if item.find('div', class_='time') else "無首播時間")  # 首播時間
+                                if item.find('div', class_='time') else "無首播時間")
             })
-        return sorted(anime_list, key=parse_date_time)  # 按日期時間排序後返回
-    except requests.RequestException:  # 處理網絡請求失敗
+        return sorted(anime_list, key=parse_date_time)
+    except requests.RequestException as e:
+        print(f"Request failed: {e}")
         return [{"error": "無法從網站獲取資料，請檢查網站是否正確"}]
 
 def get_current_season(month: int) -> str:
@@ -143,40 +140,40 @@ def get_current_season(month: int) -> str:
     if 7 <= month <= 9: return "夏"  # 7-9 月為夏季
     return "秋"  # 10-12 月為秋季
 
-@app.route('/', methods=['GET', 'POST'])  # 定義主路由，支援 GET 和 POST 請求
-@auth.login_required  # 要求用戶登入
-@limiter.limit("5 per minute")  # 限制每分鐘最多 5 次請求
+@app.route('/', methods=['GET', 'POST'])
+@auth.login_required
+@limiter.limit("5 per minute")
 def index():
-    """處理主頁面的 GET 和 POST 請求，顯示動畫查詢表單和結果"""
-    now = datetime.now()  # 獲取當前時間
-    years = [str(now.year + i) for i in range(1, 2)] + [str(now.year - i) for i in range(0, 8)]  # 生成年份選項（前7年+當前+明年）
-    default_season = get_current_season(now.month)  # 根據當前月份設置默認季節
-    context = {  # 初始化渲染上下文
-        'years': years,  # 年份選項
-        'sorted_anime_list': None,  # 動畫列表初始為空
-        'error_message': None,  # 錯誤訊息初始為空
-        'selected_season': default_season,  # 預設選中當前季節
-        'selected_year': str(now.year),  # 預設選中當前年份
-        'premiere_date': '全部'  # 預設顯示所有首播日期
+    now = datetime.now()
+    years = [str(now.year + i) for i in range(1, 2)] + [str(now.year - i) for i in range(0, 8)]
+    default_season = get_current_season(now.month)
+    context = {
+        'years': years,
+        'sorted_anime_list': None,
+        'error_message': None,
+        'selected_season': default_season,
+        'selected_year': str(now.year),
+        'premiere_date': '全部'
     }
-    if request.method == 'POST':  # 處理表單提交
-        context['selected_year'] = request.form.get('year', str(now.year))  # 獲取選擇的年份
-        context['selected_season'] = request.form.get('season', default_season)  # 獲取選擇的季節
-        context['premiere_date'] = request.form.get('premiere_date', '全部')  # 獲取選擇的首播日期
-        if not context['selected_year'].isdigit() or len(context['selected_year']) != 4:  # 驗證年份格式
+    if request.method == 'POST':
+        context['selected_year'] = request.form.get('year', str(now.year))
+        context['selected_season'] = request.form.get('season', default_season)
+        context['premiere_date'] = request.form.get('premiere_date', '全部')
+        print(f"Received form data: year={context['selected_year']}, season={context['selected_season']}, premiere_date={context['premiere_date']}")
+        if not context['selected_year'].isdigit() or len(context['selected_year']) != 4:
             context['error_message'] = "請輸入有效的年份（例如：2024）"
         else:
-            # 獲取動畫資料
+            cache.delete(f"anime_{context['selected_year']}_{context['selected_season']}")  # 清除特定快取
             context['sorted_anime_list'] = fetch_anime_data(context['selected_year'], context['selected_season'])
-            if context['premiere_date'] != "全部":  # 過濾特定首播日期
+            if context['premiere_date'] != "全部":
                 context['sorted_anime_list'] = [
                     anime for anime in context['sorted_anime_list'] 
                     if anime.get('premiere_date') == context['premiere_date']
                 ]
-            if context['sorted_anime_list'] and 'error' in context['sorted_anime_list'][0]:  # 檢查是否有錯誤
+            if context['sorted_anime_list'] and 'error' in context['sorted_anime_list'][0]:
                 context['error_message'] = context['sorted_anime_list'][0]['error']
                 context['sorted_anime_list'] = None
-    return render_template('index.html', **context)  # 渲染模板並傳遞上下文
+    return render_template('index.html', **context)
 
 if __name__ == '__main__':
     # 啟動 Flask 應用
