@@ -22,6 +22,7 @@
             height: 100%;
             display: flex;
             flex-direction: column;
+            width: 100%; /* 確保卡片寬度適應容器 */
         }
 
         .card img {
@@ -45,15 +46,11 @@
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
-            cursor: pointer; /* 提示用戶此處可交互 */
+            cursor: pointer;
         }
 
         .card-title.long-pressed {
-            background-color: #e0e0e0; /* 長按時的視覺反饋 */
-        }
-
-        .card-text {
-            margin-bottom: 10px;
+            background-color: #e0e0e0;
         }
 
         #copyButton {
@@ -67,7 +64,7 @@
             border-radius: 50%;
             background-color: #007bff;
             color: white;
-            display: none; /* 初始隱藏，當分享清單有內容時顯示 */
+            display: none;
             align-items: center;
             justify-content: center;
             font-size: 18px;
@@ -78,292 +75,207 @@
             background-color: #0056b3;
         }
 
-        #shareList .card img {
-            height: 350px; /* 與動畫結果的圖片高度一致 */
-            object-fit: cover;
+        /* 分享清單的容器樣式 */
+        #shareListContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             width: 100%;
         }
 
-        #shareList .card-body {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+        /* 分享清單中的卡片容器 */
+        .share-card {
+            width: 300px; /* 設置固定的卡片寬度 */
+            margin-bottom: 20px;
         }
     </style>
 </head>
-
 <body>
-    <div class="container mt-4">
-        <h1 class="text-center mb-4">動畫資料爬蟲</h1>
+<div class="container mt-4">
+    <h1 class="text-center mb-4">動畫資料爬蟲</h1>
 
-        <!-- 查詢表單 -->
-        <form method="POST" class="mb-4">
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label for="year" class="form-label">選擇年份：</label>
-                    <select name="year" id="year" class="form-select" required>
-                        {% for year in years %}
-                        <option value="{{ year }}" {% if year|string == selected_year %}selected{% endif %}>{{ year }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label for="season" class="form-label">選擇季節：</label>
-                    <select name="season" id="season" class="form-select" required>
-                        <option value="冬" {% if selected_season == '冬' %}selected{% endif %}>冬（1月）</option>
-                        <option value="春" {% if selected_season == '春' %}selected{% endif %}>春（4月）</option>
-                        <option value="夏" {% if selected_season == '夏' %}selected{% endif %}>夏（7月）</option>
-                        <option value="秋" {% if selected_season == '秋' %}selected{% endif %}>秋（10月）</option>
-                    </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label for="premiere_date" class="form-label">選擇首播日期：</label>
-                    <select name="premiere_date" id="premiere_date" class="form-select">
-                        <option value="全部" {% if premiere_date == '全部' %}selected{% endif %}>全部</option>
-                        <option value="一" {% if premiere_date == '一' %}selected{% endif %}>週一</option>
-                        <option value="二" {% if premiere_date == '二' %}selected{% endif %}>週二</option>
-                        <option value="三" {% if premiere_date == '三' %}selected{% endif %}>週三</option>
-                        <option value="四" {% if premiere_date == '四' %}selected{% endif %}>週四</option>
-                        <option value="五" {% if premiere_date == '五' %}selected{% endif %}>週五</option>
-                        <option value="六" {% if premiere_date == '六' %}selected{% endif %}>週六</option>
-                        <option value="日" {% if premiere_date == '日' %}selected{% endif %}>週日</option>
-                    </select>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">查詢</button>
-        </form>
-
-        <!-- 顯示錯誤訊息 -->
-        {% if error_message %}
-        <div class="alert alert-danger text-center" role="alert">
-            {{ error_message }}
-        </div>
-        {% endif %}
-
-        <!-- 查詢結果區 -->
-        {% if sorted_anime_list %}
-        <h2 class="mb-3">動畫結果：</h2>
-        <div class="row row-cols-1 row-cols-md-3 g-4">
-            {% for anime in sorted_anime_list %}
-            <div class="col">
-                <div class="card mb-4">
-                    <img src="{{ anime.anime_image_url }}" class="card-img-top" alt="動畫圖片">
-                    <div class="card-body">
-                        <h5 class="card-title" data-anime-name="{{ anime.anime_name }}">{{ anime.anime_name }}</h5>
-                        <p class="card-text">
-                            首播日期：{{ anime.premiere_date }} <br>
-                            首播時間：{{ anime.premiere_time }}
-                        </p>
-                        <button type="button" class="btn btn-success add-to-sharelist">加入分享清單</button>
-                    </div>
-                </div>
+    <!-- 查詢表單 -->
+    <form method="POST" class="mb-4">
+        <div class="row">
+            {% for label, id, value, selected in [
+                ("選擇年份：", "year", selected_year, years),
+                ("選擇季節：", "season", selected_season, ["冬", "春", "夏", "秋"]),
+                ("選擇首播日期：", "premiere_date", premiere_date, ["全部", "一", "二", "三", "四", "五", "六", "日"])
+            ] %}
+            <div class="col-md-4 mb-3">
+                <label for="{{ id }}" class="form-label">{{ label }}</label>
+                <select name="{{ id }}" id="{{ id }}" class="form-select" required>
+                    {% for opt in selected %}
+                    <option value="{{ opt }}" {% if opt == value %}selected{% endif %}>
+                        {% if id == 'season' %}{{ opt }}（{{ loop.index * 3 - 2 }}月）{% else %}{{ opt }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
             {% endfor %}
         </div>
-        {% else %}
-        <div class="alert alert-info text-center" role="alert">
-            請查詢並顯示資料。
-        </div>
-        {% endif %}
+        <button type="submit" class="btn btn-primary w-100">查詢</button>
+    </form>
 
-        <!-- 分享清單區 -->
-        <h2 class="mt-4">分享清單：</h2>
-        <div id="shareList" class="row row-cols-1 row-cols-md-3 g-4 mb-3"></div>
-        <button id="copyButton" class="btn btn-primary" title="複製分享清單為圖片">+</button>
+    <!-- 錯誤訊息 -->
+    {% if error_message %}
+    <div class="alert alert-danger text-center" role="alert">
+        {{ error_message }}
     </div>
+    {% endif %}
 
-    <!-- JS Libraries -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <!-- 查詢結果 -->
+    {% if sorted_anime_list %}
+    <h2 class="mb-3">動畫結果：</h2>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for anime in sorted_anime_list %}
+        <div class="col">
+            <div class="card mb-4">
+                <img src="{{ anime.anime_image_url }}" class="card-img-top" alt="動畫圖片">
+                <div class="card-body">
+                    <h5 class="card-title" data-anime-name="{{ anime.anime_name }}">{{ anime.anime_name }}</h5>
+                    <p class="card-text">
+                        首播日期：{{ anime.premiere_date }}<br>
+                        首播時間：{{ anime.premiere_time }}
+                    </p>
+                    <button type="button" class="btn btn-success add-to-sharelist">加入分享清單</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center" role="alert">
+        請查詢並顯示資料。
+    </div>
+    {% endif %}
 
-    <script>
-        $(document).ready(function () {
-            // 初始化 Select2 下拉選單
-            $("select").select2();
+    <!-- 分享清單區 -->
+    <h2 class="mt-4">分享清單：</h2>
+    <div id="shareListContainer">
+        <div id="shareList" class="mb-3"></div>
+    </div>
+    <button id="copyButton" class="btn btn-primary" title="複製分享清單為圖片">+</button>
+</div>
 
-            let shareList = []; // 儲存分享清單數據
-            let pressTimer; // 長按計時器
+<!-- JS Libraries -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script>
+$(document).ready(function () {
+    $("select").select2();
+    let shareList = [];
+    let pressTimer;
 
-            // 長按事件：複製動畫名稱
-            $('.card-title').on('touchstart mousedown', function (e) {
-                e.preventDefault(); // 阻止瀏覽器默認行為
-                const $this = $(this);
-                const animeName = $this.data('anime-name');
+    function copyToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return Promise.resolve();
+        }
+    }
 
-                pressTimer = setTimeout(function () {
-                    $this.addClass('long-pressed');
-                    copyToClipboard(animeName).then(() => {
-                        Swal.fire({
-                            title: '已複製',
-                            text: `${animeName} 已複製到剪貼簿！`,
-                            icon: 'success',
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(() => {
-                            $this.removeClass('long-pressed');
-                        });
-                    }).catch(err => {
-                        Swal.fire({
-                            title: '失敗',
-                            text: '複製失敗，請稍後再試！',
-                            icon: 'error',
-                            confirmButtonText: '確定'
-                        });
-                        console.error('複製失敗：', err);
-                    });
-                }, 800);
-            }).on('touchend touchcancel mouseup mouseleave', function () {
-                clearTimeout(pressTimer);
-                $(this).removeClass('long-pressed');
+    $('.card-title').on('touchstart mousedown', function (e) {
+        e.preventDefault();
+        const $this = $(this);
+        const animeName = $this.data('anime-name');
+        pressTimer = setTimeout(function () {
+            $this.addClass('long-pressed');
+            copyToClipboard(animeName).then(() => {
+                Swal.fire({ title: '已複製', text: `${animeName} 已複製到剪貼簿！`, icon: 'success', timer: 1500, showConfirmButton: false });
+                $this.removeClass('long-pressed');
+            }).catch(err => {
+                Swal.fire({ title: '失敗', text: '複製失敗，請稍後再試！', icon: 'error', confirmButtonText: '確定' });
+                console.error('複製失敗：', err);
             });
+        }, 800);
+    }).on('touchend touchcancel mouseup mouseleave', function () {
+        clearTimeout(pressTimer);
+        $(this).removeClass('long-pressed');
+    });
 
-            // 點擊事件：彈出複製確認框
-            $('.card-title').on('click', function (e) {
-                const $this = $(this);
-                const animeName = $this.data('anime-name');
-
-                Swal.fire({
-                    title: '操作選擇',
-                    text: `您想複製 "${animeName}" 嗎？`,
-                    showCancelButton: true,
-                    confirmButtonText: '複製',
-                    cancelButtonText: '取消'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        copyToClipboard(animeName).then(() => {
-                            Swal.fire({
-                                title: '已複製',
-                                text: `${animeName} 已複製到剪貼簿！`,
-                                icon: 'success',
-                                timer: 1500,
-                                showConfirmButton: false
-                            });
-                        }).catch(err => {
-                            Swal.fire({
-                                title: '失敗',
-                                text: '複製失敗，請稍後再試！',
-                                icon: 'error',
-                                confirmButtonText: '確定'
-                            });
-                        });
-                    }
-                });
-            });
-
-            // 複製到剪貼簿的通用函數（文字）
-            function copyToClipboard(text) {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    return navigator.clipboard.writeText(text);
-                } else {
-                    const textarea = document.createElement('textarea');
-                    textarea.value = text;
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    return Promise.resolve();
-                }
-            }
-
-            // 加入分享清單
-            $(".add-to-sharelist").click(function () {
-                let animeCard = $(this).closest('.card');
-                let animeData = {
-                    name: animeCard.find('.card-title').text(),
-                    image: animeCard.find('img').attr('src'),
-                    premiere_date: animeCard.find('.card-text').contents()[0].textContent.replace('首播日期：', '').trim(),
-                    premiere_time: animeCard.find('.card-text').contents()[2].textContent.replace('首播時間：', '').trim()
-                };
-
-                shareList.push(animeData);
-                updateShareList();
-
-                Swal.fire({
-                    title: '成功',
-                    text: '已加入分享清單！',
-                    icon: 'success',
-                    timer: 1200,
-                    showConfirmButton: false
-                });
-            });
-
-            // 更新分享清單
-            function updateShareList() {
-                let shareListContainer = $('#shareList');
-                shareListContainer.empty();
-
-                if (shareList.length > 0) {
-                    shareList.forEach(function (anime) {
-                        shareListContainer.append(`
-                            <div class="col">
-                                <div class="card mb-4">
-                                    <img src="${anime.image}" class="card-img-top" alt="${anime.name}">
-                                    <div class="card-body">
-                                        <h5 class="card-title" data-anime-name="${anime.name}">${anime.name}</h5>
-                                    </div>
-                                </div>
-                            </div>
-                        `);
-                    });
-                    $('#copyButton').show(); // 顯示複製按鈕
-                } else {
-                    $('#copyButton').hide(); // 隱藏複製按鈕
-                }
-            }
-
-            // 複製分享清單為圖片
-            $('#copyButton').click(function () {
-                const shareListElement = document.getElementById('shareList');
-
-                if (shareList.length === 0) {
-                    Swal.fire({
-                        title: '無內容',
-                        text: '分享清單為空，請先添加動畫！',
-                        icon: 'warning',
-                        confirmButtonText: '確定'
-                    });
-                    return;
-                }
-
-                html2canvas(shareListElement, { scale: 2 }).then(canvas => {
-                    canvas.toBlob(blob => {
-                        const item = new ClipboardItem({ 'image/png': blob });
-                        navigator.clipboard.write([item]).then(() => {
-                            Swal.fire({
-                                title: '已複製',
-                                text: '分享清單已作為圖片複製到剪貼簿！',
-                                icon: 'success',
-                                timer: 1500,
-                                showConfirmButton: false
-                            });
-                        }).catch(err => {
-                            Swal.fire({
-                                title: '失敗',
-                                text: '複製圖片失敗，請稍後再試！',
-                                icon: 'error',
-                                confirmButtonText: '確定'
-                            });
-                            console.error('圖片複製失敗：', err);
-                        });
-                    });
+    $('.card-title').on('click', function () {
+        const animeName = $(this).data('anime-name');
+        Swal.fire({
+            title: '操作選擇',
+            text: `您想複製 "${animeName}" 嗎？`,
+            showCancelButton: true,
+            confirmButtonText: '複製',
+            cancelButtonText: '取消'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                copyToClipboard(animeName).then(() => {
+                    Swal.fire({ title: '已複製', text: `${animeName} 已複製到剪貼簿！`, icon: 'success', timer: 1500, showConfirmButton: false });
                 }).catch(err => {
-                    Swal.fire({
-                        title: '失敗',
-                        text: '生成圖片失敗，請聯繫管理員！',
-                        icon: 'error',
-                        confirmButtonText: '確定'
-                    });
-                    console.error('html2canvas 錯誤：', err);
+                    Swal.fire({ title: '失敗', text: '複製失敗，請稍後再試！', icon: 'error', confirmButtonText: '確定' });
                 });
-
-                shareList.length = 0;
-                updateShareList();
-            });
+            }
         });
-    </script>
+    });
+
+    $(".add-to-sharelist").click(function () {
+        const card = $(this).closest('.card');
+        const anime = {
+            name: card.find('.card-title').text(),
+            image: card.find('img').attr('src'),
+            premiere_date: card.find('.card-text').contents()[0].textContent.replace('首播日期：', '').trim(),
+            premiere_time: card.find('.card-text').contents()[2].textContent.replace('首播時間：', '').trim()
+        };
+        shareList.push(anime);
+        updateShareList();
+        Swal.fire({ title: '成功', text: '已加入分享清單！', icon: 'success', timer: 1200, showConfirmButton: false });
+    });
+
+    function updateShareList() {
+        const container = $('#shareList').empty();
+        if (shareList.length > 0) {
+            shareList.forEach(anime => {
+                container.append(`
+                    <div class="share-card">
+                        <div class="card mb-4">
+                            <img src="${anime.image}" class="card-img-top" alt="${anime.name}">
+                            <div class="card-body">
+                                <h5 class="card-title" data-anime-name="${anime.name}">${anime.name}</h5>
+                            </div>
+                        </div>
+                    </div>`);
+            });
+            $('#copyButton').show();
+        } else {
+            $('#copyButton').hide();
+        }
+    }
+
+    $('#copyButton').click(function () {
+        if (shareList.length === 0) {
+            return Swal.fire({ title: '無內容', text: '分享清單為空，請先添加動畫！', icon: 'warning', confirmButtonText: '確定' });
+        }
+        html2canvas(document.getElementById('shareList'), { scale: 2 }).then(canvas => {
+            canvas.toBlob(blob => {
+                navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+                    .then(() => Swal.fire({ title: '已複製', text: '分享清單已作為圖片複製到剪貼簿！', icon: 'success', timer: 1500, showConfirmButton: false }))
+                    .catch(err => {
+                        Swal.fire({ title: '失敗', text: '複製圖片失敗，請稍後再試！', icon: 'error', confirmButtonText: '確定' });
+                        console.error('圖片複製失敗：', err);
+                    });
+            });
+        }).catch(err => {
+            Swal.fire({ title: '失敗', text: '生成圖片失敗，請聯繫管理員！', icon: 'error', confirmButtonText: '確定' });
+            console.error('html2canvas 錯誤：', err);
+        });
+        shareList.length = 0;
+        updateShareList();
+    });
+});
+</script>
 </body>
 </html>
