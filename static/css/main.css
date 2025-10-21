@@ -1,0 +1,71 @@
+.card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.card img {
+    height: 300px;  /* 固定原尺寸 */
+    width: 100%;    /* 自適應寬度 */
+    object-fit: contain;  /* 完整顯示，不拉伸/裁剪（比 cover 更一致） */
+}
+
+.card-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.card-title {
+    min-height: 48px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    cursor: pointer;
+}
+
+.card-title.long-pressed {
+    background-color: #e0e0e0;
+}
+
+#copyButton {
+    position: fixed;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #007bff;
+    color: white;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#copyButton:hover {
+    background-color: #0056b3;
+}
+
+/* 分享清單的容器樣式 */
+#shareListContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/* 分享清單中的卡片容器 */
+.share-card {
+    width: 100%;  /* 優化：改為響應式，非固定 300px */
+    max-width: 300px;
+    margin-bottom: 20px;
+}

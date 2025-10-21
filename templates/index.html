@@ -1,96 +1,18 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>動畫資料爬蟲</title>
-    <meta name="description" content="快速查詢動畫資料，依年份、季節、首播日期篩選">
+{% extends "base.html" %}
 
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="動畫資料爬蟲">
-    <meta property="og:description" content="快速查詢動畫資料">
-    <meta property="og:image" content="data:image/png;base64,iVBORw0KGgo...">
-    <meta property="og:url" content="https://lee-github-io.onrender.com/">
-    <meta property="og:type" content="website">
+{% block title %}動畫資料爬蟲{% endblock %}
 
-    <!-- CSS Libraries -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet">
+{% block head %}
+<meta name="description" content="快速查詢動畫資料，依年份、季節、首播日期篩選">
+<!-- Open Graph Meta Tags -->
+<meta property="og:title" content="動畫資料爬蟲">
+<meta property="og:description" content="快速查詢動畫資料">
+<meta property="og:image" content="data:image/png;base64,iVBORw0KGgo...">
+<meta property="og:url" content="https://lee-github-io.onrender.com/">
+<meta property="og:type" content="website">
+{% endblock %}
 
-    <style>
-        .card {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            width: 100%; /* 確保卡片寬度適應容器 */
-        }
-
-        .card img {
-            height: 350px;
-            object-fit: cover;
-            width: 100%;
-        }
-
-        .card-body {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .card-title {
-            min-height: 48px;
-            margin-bottom: 10px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            cursor: pointer;
-        }
-
-        .card-title.long-pressed {
-            background-color: #e0e0e0;
-        }
-
-        #copyButton {
-            position: fixed;
-            top: 50%;
-            left: 10px;
-            transform: translateY(-50%);
-            z-index: 1000;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: #007bff;
-            color: white;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        #copyButton:hover {
-            background-color: #0056b3;
-        }
-
-        /* 分享清單的容器樣式 */
-        #shareListContainer {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
-
-        /* 分享清單中的卡片容器 */
-        .share-card {
-            width: 300px; /* 設置固定的卡片寬度 */
-            margin-bottom: 20px;
-        }
-    </style>
-</head>
-<body>
+{% block body %}
 <div class="container mt-4">
     <h1 class="text-center mb-4">動畫資料爬蟲</h1>
 
@@ -131,7 +53,11 @@
         {% for anime in sorted_anime_list %}
         <div class="col">
             <div class="card mb-4">
-                <img src="{{ anime.anime_image_url }}" class="card-img-top" alt="動畫圖片">
+               <img src="{{ anime.anime_image_url }}" 
+                class="card-img-top" 
+                alt="動畫圖片" 
+                style="height: 300px; object-fit: contain;" 
+                loading="lazy">
                 <div class="card-body">
                     <h5 class="card-title" data-anime-name="{{ anime.anime_name }}">{{ anime.anime_name }}</h5>
                     <p class="card-text">
@@ -157,125 +83,4 @@
     </div>
     <button id="copyButton" class="btn btn-primary" title="複製分享清單為圖片">+</button>
 </div>
-
-<!-- JS Libraries -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-<script>
-$(document).ready(function () {
-    $("select").select2();
-    let shareList = [];
-    let pressTimer;
-
-    function copyToClipboard(text) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(text);
-        } else {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            return Promise.resolve();
-        }
-    }
-
-    $('.card-title').on('touchstart mousedown', function (e) {
-        e.preventDefault();
-        const $this = $(this);
-        const animeName = $this.data('anime-name');
-        pressTimer = setTimeout(function () {
-            $this.addClass('long-pressed');
-            copyToClipboard(animeName).then(() => {
-                Swal.fire({ title: '已複製', text: `${animeName} 已複製到剪貼簿！`, icon: 'success', timer: 1500, showConfirmButton: false });
-                $this.removeClass('long-pressed');
-            }).catch(err => {
-                Swal.fire({ title: '失敗', text: '複製失敗，請稍後再試！', icon: 'error', confirmButtonText: '確定' });
-                console.error('複製失敗：', err);
-            });
-        }, 800);
-    }).on('touchend touchcancel mouseup mouseleave', function () {
-        clearTimeout(pressTimer);
-        $(this).removeClass('long-pressed');
-    });
-
-    $('.card-title').on('click', function () {
-        const animeName = $(this).data('anime-name');
-        Swal.fire({
-            title: '操作選擇',
-            text: `您想複製 "${animeName}" 嗎？`,
-            showCancelButton: true,
-            confirmButtonText: '複製',
-            cancelButtonText: '取消'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                copyToClipboard(animeName).then(() => {
-                    Swal.fire({ title: '已複製', text: `${animeName} 已複製到剪貼簿！`, icon: 'success', timer: 1500, showConfirmButton: false });
-                }).catch(err => {
-                    Swal.fire({ title: '失敗', text: '複製失敗，請稍後再試！', icon: 'error', confirmButtonText: '確定' });
-                });
-            }
-        });
-    });
-
-    $(".add-to-sharelist").click(function () {
-        const card = $(this).closest('.card');
-        const anime = {
-            name: card.find('.card-title').text(),
-            image: card.find('img').attr('src'),
-            premiere_date: card.find('.card-text').contents()[0].textContent.replace('首播日期：', '').trim(),
-            premiere_time: card.find('.card-text').contents()[2].textContent.replace('首播時間：', '').trim()
-        };
-        shareList.push(anime);
-        updateShareList();
-        Swal.fire({ title: '成功', text: '已加入分享清單！', icon: 'success', timer: 1200, showConfirmButton: false });
-    });
-
-    function updateShareList() {
-        const container = $('#shareList').empty();
-        if (shareList.length > 0) {
-            shareList.forEach(anime => {
-                container.append(`
-                    <div class="share-card">
-                        <div class="card mb-4">
-                            <img src="${anime.image}" class="card-img-top" alt="${anime.name}">
-                            <div class="card-body">
-                                <h5 class="card-title" data-anime-name="${anime.name}">${anime.name}</h5>
-                            </div>
-                        </div>
-                    </div>`);
-            });
-            $('#copyButton').show();
-        } else {
-            $('#copyButton').hide();
-        }
-    }
-
-    $('#copyButton').click(function () {
-        if (shareList.length === 0) {
-            return Swal.fire({ title: '無內容', text: '分享清單為空，請先添加動畫！', icon: 'warning', confirmButtonText: '確定' });
-        }
-        html2canvas(document.getElementById('shareList'), { scale: 2 }).then(canvas => {
-            canvas.toBlob(blob => {
-                navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-                    .then(() => Swal.fire({ title: '已複製', text: '分享清單已作為圖片複製到剪貼簿！', icon: 'success', timer: 1500, showConfirmButton: false }))
-                    .catch(err => {
-                        Swal.fire({ title: '失敗', text: '複製圖片失敗，請稍後再試！', icon: 'error', confirmButtonText: '確定' });
-                        console.error('圖片複製失敗：', err);
-                    });
-            });
-        }).catch(err => {
-            Swal.fire({ title: '失敗', text: '生成圖片失敗，請聯繫管理員！', icon: 'error', confirmButtonText: '確定' });
-            console.error('html2canvas 錯誤：', err);
-        });
-        shareList.length = 0;
-        updateShareList();
-    });
-});
-</script>
-</body>
-</html>
+{% endblock %}
