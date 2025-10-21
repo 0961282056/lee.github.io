@@ -27,11 +27,7 @@ SEASON_TO_MONTH = Config.SEASON_TO_MONTH
 WEEKDAY_MAP = Config.WEEKDAY_MAP
 
 # --- 路由 ---
-@app.route('/')
-def home():
-    return render_template('home.html')
-
-@app.route('/anime-crawler', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def index():
     now = datetime.now()
@@ -72,7 +68,7 @@ def index():
                 context['sorted_anime_list'] = anime_list
                 logger.info(f"成功載入 {len(anime_list)} 筆動畫資料")
 
-    return render_template('index.html', **context) 
+    return render_template('index.html', **context)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=os.getenv('FLASK_DEBUG', 'False') == 'True')
