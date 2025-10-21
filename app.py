@@ -27,7 +27,11 @@ SEASON_TO_MONTH = Config.SEASON_TO_MONTH
 WEEKDAY_MAP = Config.WEEKDAY_MAP
 
 # --- 路由 ---
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+@app.route('/anime-crawler', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def index():
     now = datetime.now()
