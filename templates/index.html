@@ -1,3 +1,4 @@
+<!-- index.html -->
 {% extends "base.html" %}
 
 {% block title %}動畫資料爬蟲{% endblock %}
@@ -13,21 +14,28 @@
 {% endblock %}
 
 {% block body %}
-<div class="container mt-4">
-    <h1 class="text-center mb-4">動畫資料爬蟲</h1>
+<!-- Header -->
+<header class="bg-primary text-white py-3">
+    <div class="container">
+        <h1 class="text-center mb-0">動畫資料爬蟲</h1>
+        <p class="text-center mb-0 opacity-75">快速查詢最新動畫資訊</p>
+    </div>
+</header>
 
+<div class="container my-4">
     <!-- 查詢表單 -->
-    <form method="POST" class="mb-4">
-        <div class="row">
-            {% for label, id, value, selected in [
+    <section class="mb-5">
+        <h2 class="h4 text-center mb-4">查詢條件</h2>
+        <form method="POST" class="row g-3 justify-content-center">
+            {% for label, id, value, options in [
                 ("選擇年份：", "year", selected_year, years),
                 ("選擇季節：", "season", selected_season, ["冬", "春", "夏", "秋"]),
                 ("選擇首播日期：", "premiere_date", premiere_date, ["全部", "一", "二", "三", "四", "五", "六", "日"])
             ] %}
-            <div class="col-md-4 mb-3">
-                <label for="{{ id }}" class="form-label">{{ label }}</label>
+            <div class="col-12 col-md-4">
+                <label for="{{ id }}" class="form-label fw-bold">{{ label }}</label>
                 <select name="{{ id }}" id="{{ id }}" class="form-select" required>
-                    {% for opt in selected %}
+                    {% for opt in options %}
                     <option value="{{ opt }}" {% if opt == value %}selected{% endif %}>
                         {% if id == 'season' %}{{ opt }}（{{ loop.index * 3 - 2 }}月）{% else %}{{ opt }}{% endif %}
                     </option>
@@ -35,9 +43,11 @@
                 </select>
             </div>
             {% endfor %}
-        </div>
-        <button type="submit" class="btn btn-primary w-100">查詢</button>
-    </form>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary w-100 w-md-auto">查詢動畫</button>
+            </div>
+        </form>
+    </section>
 
     <!-- 錯誤訊息 -->
     {% if error_message %}
@@ -48,39 +58,48 @@
 
     <!-- 查詢結果 -->
     {% if sorted_anime_list %}
-    <h2 class="mb-3">動畫結果：</h2>
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for anime in sorted_anime_list %}
-        <div class="col">
-            <div class="card mb-4">
-               <img src="{{ anime.anime_image_url }}" 
-                class="card-img-top" 
-                alt="動畫圖片" 
-                style="height: 300px; object-fit: contain;" 
-                loading="lazy">
-                <div class="card-body">
-                    <h5 class="card-title" data-anime-name="{{ anime.anime_name }}">{{ anime.anime_name }}</h5>
-                    <p class="card-text">
-                        首播日期：{{ anime.premiere_date }}<br>
-                        首播時間：{{ anime.premiere_time }}
-                    </p>
-                    <button type="button" class="btn btn-success add-to-sharelist">加入分享清單</button>
+    <section class="mb-5">
+        <h2 class="h4 text-center mb-4">查詢結果（{{ sorted_anime_list|length }} 筆）</h2>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            {% for anime in sorted_anime_list %}
+            <div class="col">
+                <div class="card h-100 anime-card">
+                    <img src="{{ anime.anime_image_url }}" 
+                         class="card-img-top" 
+                         alt="{{ anime.anime_name }}" 
+                         loading="lazy">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title anime-title" data-anime-name="{{ anime.anime_name }}">{{ anime.anime_name }}</h5>
+                        <p class="card-text flex-grow-1">
+                            <small class="text-muted">
+                                首播日期：{{ anime.premiere_date }}<br>
+                                首播時間：{{ anime.premiere_time }}
+                            </small>
+                        </p>
+                        <button type="button" class="btn btn-success btn-sm mt-auto add-to-sharelist w-100">加入分享清單</button>
+                    </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
+    </section>
     {% else %}
     <div class="alert alert-info text-center" role="alert">
-        請查詢並顯示資料。
+        請選擇條件並查詢資料。
     </div>
     {% endif %}
 
     <!-- 分享清單區 -->
-    <h2 class="mt-4">分享清單：</h2>
-    <div id="shareListContainer">
-        <div id="shareList" class="mb-3"></div>
-    </div>
-    <button id="copyButton" class="btn btn-primary" title="複製分享清單為圖片">+</button>
+    <section>
+        <h2 class="h4 text-center mb-4">分享清單</h2>
+        <div id="shareListContainer" class="row justify-content-center">
+            <div id="shareList" class="col-12 col-lg-8"></div>
+        </div>
+        <div class="text-center mt-3">
+            <button id="copyButton" class="btn btn-primary" title="複製分享清單為圖片">
+                📋 複製清單
+            </button>
+        </div>
+    </section>
 </div>
 {% endblock %}
