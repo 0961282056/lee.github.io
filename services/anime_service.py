@@ -211,11 +211,11 @@ def fetch_anime_data(year: str, season: str, cache: Cache = None) -> List[Dict]:
 
         anime_items = anime_data.find_all('div', class_='CV-search')
 
-        # 並行處理
+        # 並行處理（降低 max_workers 到 6，減少併發壓力）
         anime_list = []
         parallel_start_time = time.time()  # 新增：記錄並行處理開始時間
-        logger.info(f"[PARALLEL] 開始並行處理 {len(anime_items)} 筆資料，max_workers=10")
-        with ThreadPoolExecutor(max_workers=10) as executor:  # 從 10 
+        logger.info(f"[PARALLEL] 開始並行處理 {len(anime_items)} 筆資料，max_workers=6")
+        with ThreadPoolExecutor(max_workers=6) as executor:  # 從 10 降到 6
             future_to_item = {}
             for idx, item in enumerate(anime_items):
                 future = executor.submit(process_anime_item, item, cache)
