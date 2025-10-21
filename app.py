@@ -72,7 +72,7 @@ def index():
                 context['sorted_anime_list'] = anime_list
                 logger.info(f"成功載入 {len(anime_list)} 筆動畫資料")
 
-    return render_template('index.html', **context)
+    return render_template('index.html', **context) 
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=os.getenv('FLASK_DEBUG', 'False') == 'True')
