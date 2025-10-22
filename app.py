@@ -28,7 +28,7 @@ WEEKDAY_MAP = Config.WEEKDAY_MAP
 
 # --- 路由 ---
 @app.route('/', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute")  # 修改：從 5 次改為 10 次 per minute
 def index():
     now = datetime.now()
     years = [str(now.year + i) for i in range(1, 2)] + [str(now.year - i) for i in range(0, 8)]
