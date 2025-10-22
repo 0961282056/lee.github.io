@@ -18,6 +18,7 @@ from urllib3.util.retry import Retry       # 新增：重試策略
 import time                               # 新增：微延遲
 import threading                          # 新增：用於顯示 thread 名稱
 import logging                           # 新增：日誌
+import re
 
 load_dotenv()  # 載入 .env
 
@@ -61,16 +62,38 @@ cloudinary.config(
 SEASON_TO_MONTH = Config.SEASON_TO_MONTH
 WEEKDAY_MAP = Config.WEEKDAY_MAP
 
-def parse_date_time(anime: Dict) -> Tuple[int, datetime]:
-    """解析動畫的首播日期和時間，用於排序。"""
+def parse_date_time(anime: Dict) -> Tuple[int, float]:
+    """
+    解析動畫的首播日期和時間，用於排序。
+    優化：不轉換深夜時間，直接將時間轉為浮點數 (e.g., "25:30" -> 25.5)，讓 >24 的自然排在正常時間之後。
+    "無" 時間排到星期內最早 (0.0)；無日期排最後。
+    注意：key 改為 (int, float)，以支援時間浮點比較。
+    """
     try:
         if anime['premiere_date'] == "無首播日期":
-            return 7, datetime.max
-        weekday = WEEKDAY_MAP.get(anime['premiere_date'], 7)
-        premiere_time = datetime.strptime(anime['premiere_time'], "%H:%M")
-        return weekday, premiere_time
-    except (ValueError, KeyError):
-        return 7, datetime.max
+            return 8, float('inf')  # 無日期排最後 (inf > 任何時間)
+        weekday = WEEKDAY_MAP.get(anime['premiere_date'], 7)  # 預設 7 (未知)
+        if anime['premiere_time'] == "無":
+            return weekday, 0.0  # 無時間排到星期內最早
+        
+        # 解析時間為浮點數 (HH.MM)，支援 >24
+        time_match = re.match(r'(\d{1,2}):(\d{2})', anime['premiere_time'])
+        if not time_match:
+            raise ValueError(f"無效時間格式: {anime['premiere_time']}")
+        
+        hour, minute = int(time_match.group(1)), int(time_match.group(2))
+        time_float = hour + (minute / 60.0)  # e.g., "25:30" -> 25.5
+        
+        # 驗證 (允許 >24)
+        if not (0 <= minute <= 59):
+            raise ValueError(f"無效分鐘: {minute}")
+        
+        return weekday, time_float
+        
+    except (ValueError, KeyError) as e:
+        # 記錄錯誤以診斷（生產環境可移除）
+        logger.warning(f"排序解析錯誤: {anime.get('premiere_date', 'N/A')} - {anime.get('premiere_time', 'N/A')}, 錯誤: {e}")
+        return 7, float('inf')  # fallback (未知排最後)
 
 def upload_to_cloudinary(image_url: str, cache: Cache = None) -> str:
     """上傳圖片到 Cloudinary，返回永久 URL。強制上傳，除非快取命中。"""
@@ -140,25 +163,54 @@ def upload_to_cloudinary(image_url: str, cache: Cache = None) -> str:
     except (requests.RequestException, Exception) as e:
         logger.error(f"[ERROR] 上傳失敗: {image_url[:50]}..., 錯誤: {e}")
         return image_url
-    
-def process_anime_item(item, cache: Cache = None) -> Dict:
-    """單一動畫項目的處理邏輯（用於並行）。"""
-    premiere_date_elem = item.find('div', class_='day')
-    premiere_date = premiere_date_elem.text.strip().replace("星期", "") if premiere_date_elem else "無首播日期"
 
-    image_tag = item.find('div', class_='overflow-hidden anime_bg')
+def process_anime_item(item, cache: Cache = None) -> Dict:
+    """
+    單一動畫項目的處理邏輯（用於並行）。
+    提取首播日期、時間、圖片 URL、名稱和故事大綱。
+    """
+    # 提取首播資訊（日期和時間）
+    premiere_date_elem = item.find('div', {'class': 'time_today main_time'})
+    premiere_date = "無首播日期"
+    premiere_time = "無首播時間"
+    
+    if premiere_date_elem:
+        text = premiere_date_elem.get_text(strip=True)
+        
+        # 提取星期（每週[一二三四五六日天]）
+        week_match = re.search(r'每週([一二三四五六日天])', text)
+        week_day = week_match.group(1) if week_match else None
+        
+        # 提取時間（\d{1,2}時\d{1,2}分）
+        time_match = re.search(r'(\d{1,2})時(\d{1,2})分', text)
+        if time_match:
+            hour, minute = int(time_match.group(1)), int(time_match.group(2))
+            premiere_time = f"{hour:02d}:{minute:02d}"
+        
+        if week_day:
+            premiere_date = week_day
+
+    # 提取圖片 URL
+    image_tag = item.find('div', {'class': 'overflow-hidden anime_cover_image'})
     image_url = image_tag.img['src'] if image_tag and image_tag.img else "無圖片"
     anime_image_url = upload_to_cloudinary(image_url, cache)
 
-    anime_name_elem = item.find('div', class_='anime_name')
-    time_elem = item.find('div', class_='time')
+    # 提取動畫名稱
+    anime_name_elem = item.find('h3', {'class': 'entity_localized_name'})
+    anime_name = anime_name_elem.get_text(strip=True) if anime_name_elem else "無名稱"
 
+    # 提取故事大綱
+    story_elem = item.find('div', {'class': 'anime_story'})
+    story = story_elem.get_text(strip=True) if story_elem else "無故事大綱"
+
+    # 建構結果
     result = {
         'bangumi_id': item.get('acgs-bangumi-data-id', "未知ID"),
-        'anime_name': anime_name_elem.text.strip() if anime_name_elem else "無名稱",
+        'anime_name': anime_name,
         'anime_image_url': anime_image_url,
         'premiere_date': premiere_date,
-        'premiere_time': time_elem.text.strip() if time_elem else "無首播時間"
+        'premiere_time': premiere_time,
+        'story': story
     }
     return result
 
@@ -182,7 +234,7 @@ def fetch_anime_data(year: str, season: str, cache: Cache = None) -> List[Dict]:
         response.encoding = 'utf-8'
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        anime_data = soup.find('div', id='acgs-anime-icons')
+        anime_data = soup.find('div', id='acgs-anime-list')
         if not anime_data:
             return [{"error": "未找到任何動畫資料"}]
 

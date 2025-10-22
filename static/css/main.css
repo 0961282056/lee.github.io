@@ -31,6 +31,8 @@ header {
     height: 100%;  /* 確保卡片高度一致 */
     display: flex;
     flex-direction: column;
+    max-width: 300px;  /* 卡片最大寬度配合圖片 */
+    margin: 0 auto;  /* 置中卡片 */
 }
 
 .anime-card:hover {
@@ -39,11 +41,12 @@ header {
 }
 
 .anime-card img {
-    width: 300px;  /* 固定寬度為 300px */
-    height: 300px;  /* 固定高度為 300px */
-    object-fit: contain;  /* 不縮放，完整顯示圖片，保持原比例 */
+    width: 300px;  /* 固定寬度 300px */
+    height: 300px;  /* 固定高度 300px */
+    object-fit: contain;  /* 完整顯示圖片，保持原比例 */
     background-color: #f8f9fa;
     margin: 0 auto;  /* 置中圖片 */
+    flex-shrink: 0;  /* 圖片不縮放 */
 }
 
 .anime-card .card-body {
@@ -51,6 +54,7 @@ header {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    min-height: 180px;  /* 最小高度，容納故事大綱，配合圖片總高 */
 }
 
 .anime-title {
@@ -77,16 +81,50 @@ header {
     border-radius: 4px;
 }
 
-.card-text {
-    font-size: 0.875rem;
-    color: #6c757d;
-    margin-bottom: 1rem;
-    flex-grow: 1;  /* 讓文字區擴展 */
+/* 新增：資訊區塊樣式 */
+.info-section {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
+.info-section small {
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* 新增：故事大綱區塊樣式 */
+.story-section {
+    flex-grow: 1;  /* 讓故事區擴展，填滿剩餘空間 */
+    min-height: 60px;  /* 最小高度，避免空蕩 */
+}
+
+.story-summary {
+    font-size: 0.75rem;  /* 小字體，節省空間 */
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;  /* 限制 3 行，防止過長 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: #6c757d;
+}
+
+.story-summary:hover {
+    color: #495057;  /* hover 變深色，提高可讀性 */
+}
+
+/* 新增：長按視覺反饋 */
+.story-summary.long-pressed {
+    background-color: #e3f2fd;
+    padding: 0.25rem;
+    border-radius: 4px;
+}
+
+/* 按鈕樣式 */
 .add-to-sharelist {
     font-size: 0.875rem;
     padding: 0.5rem;
+    margin-top: auto;  /* 固定在底部 */
 }
 
 /* 分享清單樣式 */
@@ -115,9 +153,9 @@ header {
 }
 
 #shareList .share-card img {
-    width: 300px;  /* 固定寬度為 300px */
-    height: 300px;  /* 固定高度為 300px */
-    object-fit: contain;  /* 不縮放，完整顯示圖片，保持原比例 */
+    width: 300px;  /* 分享清單固定 300px 寬 */
+    height: 300px;  /* 固定 300px 高 */
+    object-fit: contain;  /* 完整顯示圖片，保持原比例 */
     border-radius: 6px;
     flex-shrink: 0;  /* 圖片不縮放 */
     background-color: #f8f9fa;
@@ -135,8 +173,20 @@ header {
     font-size: 1rem;
 }
 
-#shareList .share-card small {
+#shareList .share-card .share-info {
+    font-size: 0.8rem;
     color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+#shareList .share-card .share-story {
+    font-size: 0.75rem;
+    color: #6c757d;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;  /* 分享清單限制 2 行 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* 複製按鈕樣式 */
@@ -171,16 +221,30 @@ header {
         font-size: 1.5rem;
     }
     
+    .anime-card {
+        max-width: 100%;  /* 手機全寬 */
+    }
+    
     .anime-card img,
     #shareList .share-card img {
-        width: 100%;  /* 手機全寬 */
-        height: 250px;  /* 手機調整高度，但盡量接近 300px */
-        max-width: 300px;  /* 最大不超過 300px */
+        width: 100%;  /* 手機全寬，但 max-width: 300px */
+        max-width: 300px;
+        height: 200px;  /* 手機調整高度 */
+    }
+    
+    .anime-card .card-body {
+        min-height: 140px;  /* 手機縮短 */
+        padding: 0.75rem;
     }
     
     .anime-title {
         font-size: 0.9rem;
         -webkit-line-clamp: 1;  /* 手機單行標題 */
+    }
+    
+    .story-summary {
+        -webkit-line-clamp: 2;  /* 手機限制 2 行故事 */
+        font-size: 0.7rem;
     }
     
     #copyButton {
@@ -199,6 +263,16 @@ header {
         flex-direction: column;  /* 手機垂直排列 */
         text-align: center;
     }
+    
+    #shareList .share-card img {
+        width: 100%;
+        max-width: 200px;  /* 手機分享清單縮小 */
+        height: 200px;
+    }
+    
+    #shareList .share-card .share-story {
+        -webkit-line-clamp: 1;  /* 手機分享清單 1 行 */
+    }
 }
 
 @media (min-width: 577px) and (max-width: 768px) {  /* 平板小 */
@@ -215,6 +289,10 @@ header {
         width: 280px;  /* 平板略縮 */
         height: 280px;
     }
+    
+    .story-summary {
+        -webkit-line-clamp: 3;  /* 平板 3 行 */
+    }
 }
 
 @media (min-width: 769px) {  /* 平板大及桌面 */
@@ -222,6 +300,10 @@ header {
     #shareList .share-card img {
         width: 300px;  /* 桌面固定 300px */
         height: 300px;
+    }
+    
+    .story-summary {
+        -webkit-line-clamp: 4;  /* 桌面 4 行 */
     }
 }
 

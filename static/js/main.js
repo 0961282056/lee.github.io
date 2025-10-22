@@ -51,6 +51,37 @@ $(document).ready(function () {
         Swal.fire(config);
     }
 
+    // 長按故事大綱顯示完整內容彈跳視窗（唯一保留的展開方式）
+    $('.anime-card').on('touchstart mousedown', '.story-summary', function (e) {
+        e.preventDefault();
+        const $this = $(this);
+        const fullText = $this.text().trim();  // 直接用 .text() 獲取完整內容（移除 title 依賴）
+        const animeName = $this.closest('.anime-card').find('.anime-title').data('anime-name') || $this.closest('.anime-card').find('.anime-title').text().trim();
+        
+        pressTimer = setTimeout(() => {
+            $this.addClass('long-pressed');  // 視覺反饋（需在 CSS 新增樣式）
+            
+            // 使用 SweetAlert 顯示完整故事
+            Swal.fire({
+                title: `${animeName} - 故事大綱`,
+                html: `<div style="text-align: left; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.4;">${fullText}</div>`,
+                icon: 'info',
+                width: '500px',
+                padding: '2rem',
+                showConfirmButton: true,
+                confirmButtonText: '關閉',
+                confirmButtonColor: '#007bff',
+                allowOutsideClick: true,
+                allowEscapeKey: true
+            }).then(() => {
+                $this.removeClass('long-pressed');
+            });
+        }, 800); // 長按延遲 800ms
+    }).on('touchend touchcancel mouseup mouseleave', '.story-summary', function () {
+        clearTimeout(pressTimer);
+        $(this).removeClass('long-pressed');
+    });
+
     // 長按/滑鼠按下複製動畫名稱
     $('.anime-card').on('touchstart mousedown', '.anime-title', function (e) {
         e.preventDefault();
@@ -105,8 +136,9 @@ $(document).ready(function () {
         const anime = {
             name: $card.find('.anime-title').text().trim(),
             image: $card.find('img').attr('src'),
-            premiere_date: $card.find('.card-text small').first().text().replace('首播日期：', '').trim(),
-            premiere_time: $card.find('.card-text small').last().text().replace('首播時間：', '').trim()
+            premiere_date: $card.find('.info-section small').first().text().replace('首播日期：', '').trim(),
+            premiere_time: $card.find('.info-section small').eq(1).text().replace('首播時間：', '').trim(),
+            story: $card.find('.story-summary').text().trim()  // 直接用 .text() 獲取完整故事（移除 title 依賴）
         };
 
         // 避免重複加入
@@ -119,7 +151,7 @@ $(document).ready(function () {
         }
     });
 
-    // 更新分享清單 UI
+    // 更新分享清單 UI（移除 title，避免原生提示）
     function updateShareList() {
         const $container = $('#shareList').empty();
         if (shareList.length > 0) {
@@ -131,15 +163,20 @@ $(document).ready(function () {
                         </div>
                         <div class="col-md-8 share-content">
                             <h6 class="anime-name">${anime.name}</h6>
-                            <small class="text-muted">首播日期：${anime.premiere_date}</small><br>
-                            <small class="text-muted">首播時間：${anime.premiere_time}</small>
+                            <div class="share-info">
+                                <small class="text-muted d-block">首播日期：${anime.premiere_date}</small>
+                                <small class="text-muted d-block">首播時間：${anime.premiere_time}</small>
+                            </div>
+                            <div class="share-story mt-2">
+                                <small class="text-muted">${anime.story.substring(0, 100)}${anime.story.length > 100 ? '...' : ''}</small>  <!-- 移除 title -->
+                            </div>
                             <button class="btn btn-outline-danger btn-sm remove-from-list mt-2" data-index="${index}">移除</button>
                         </div>
                     </div>
                 `);
                 $container.append($shareCard);
             });
-            $('#copyButton').fadeIn(300).prop('disabled', false).text('📋 複製清單');
+            $('#copyButton').fadeIn(300).prop('disabled', false).text('📋');
         } else {
             $container.html('<p class="text-muted text-center py-4">分享清單為空，點擊「加入分享清單」添加動畫。</p>');
             $('#copyButton').fadeOut(300).prop('disabled', true);
@@ -227,7 +264,7 @@ $(document).ready(function () {
                     showAlert('已下載', '圖片已下載到裝置（複製失敗時的備份）！', 'info', 2000);
 
                     // Fallback 2: 同時複製文字清單
-                    const textList = shareList.map(anime => `${anime.name}\n首播：${anime.premiere_date} ${anime.premiere_time}`).join('\n\n');
+                    const textList = shareList.map(anime => `${anime.name}\n首播：${anime.premiere_date} ${anime.premiere_time}\n故事：${anime.story}`).join('\n\n');
                     await copyToClipboard(textList);
                     console.log('文字清單已備份複製');
                 }
@@ -238,13 +275,13 @@ $(document).ready(function () {
             showAlert('生成失敗', '無法生成圖片，請檢查圖片來源或瀏覽器設定（試試 Chrome）。', 'error');
 
             // 最終 Fallback: 複製純文字清單
-            const textList = shareList.map(anime => `• ${anime.name}\n  首播：${anime.premiere_date} ${anime.premiere_time}`).join('\n\n');
+            const textList = shareList.map(anime => `• ${anime.name}\n  首播：${anime.premiere_date} ${anime.premiere_time}\n  故事：${anime.story}`).join('\n\n');
             const success = await copyToClipboard(textList);
             if (success) {
                 showAlert('文字備份', `已複製文字清單（${shareList.length} 項）到剪貼簿！`, 'info', 2000);
             }
         } finally {
-            $button.prop('disabled', false).html('📋 複製清單');
+            $button.prop('disabled', false).html('📋');
         }
     });
 });
