@@ -64,7 +64,7 @@ $(document).ready(function () {
             // 使用 SweetAlert 顯示完整故事
             Swal.fire({
                 title: `${animeName} - 故事大綱`,
-                html: `<div style="text-align: left; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.4;">${fullText}</div>`,
+                html: `<div style="text-align: left; white-space: pre-wrap; font-size: 1.3rem; line-height: 1.4;">${fullText}</div>`,
                 icon: 'info',
                 width: '500px',
                 padding: '2rem',
